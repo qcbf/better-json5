@@ -1791,9 +1791,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"better-json5@workspace:.":
+"better-json5-x@workspace:.":
   version: 0.0.0-use.local
-  resolution: "better-json5@workspace:."
+  resolution: "better-json5-x@workspace:."
   dependencies:
     "@blueglassblock/json5-kit": "npm:^0.3.0"
     "@blueglassblock/json5-languageservice": "npm:^0.8.0"
