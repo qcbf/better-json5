@@ -1,3 +1,6 @@
+# changes
+- add feature compact mode
+
 <div align="center">
 
 # better-json5 
