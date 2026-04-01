@@ -115,6 +115,20 @@
           "default": false,
           "description": "%json5.format.keepLines.desc%"
         },
+        "json5.format.compactMaxLength": {
+          "type": "number",
+          "scope": "window",
+          "default": 0,
+          "minimum": 0,
+          "description": "%json5.format.compactMaxLength.desc%"
+        },
+        "json5.format.compactPreserveLevel": {
+          "type": "number",
+          "scope": "window",
+          "default": 0,
+          "minimum": 0,
+          "description": "%json5.format.compactPreserveLevel.desc%"
+        },
         "json5.format.trailingCommas": {
           "type": "string",
           "scope": "window",

@@ -6,6 +6,8 @@
 	"json5.schemas.schema.desc": "The schema definition for the given URL. The schema only needs to be provided to avoid accesses to the schema URL.",
 	"json5.format.enable.desc": "Enable/disable default JSON5 formatter",
 	"json5.format.keepLines.desc": "Keep all existing new lines when formatting.",
+	"json5.format.compactMaxLength.desc": "Compact objects and arrays into a single line when their formatted length is within this limit. Set to 0 to disable compact formatting.",
+	"json5.format.compactPreserveLevel.desc": "Keep objects and arrays expanded within this nesting level when compact formatting is enabled. Only deeper levels may be compacted.",
 	"json5.format.trailingCommas.desc": "Controls whether trailing commas are added when formatting.",
 	"json5.format.keyQuotes.desc": "Controls which quotes are used for object keys when formatting.",
 	"json5.format.stringQuotes.desc": "Controls which quotes are used for strings other than keys when formatting.",

@@ -210,6 +210,8 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 			schemas?: JSONSchemaSettings[];
 			format?: {
 				enable?: boolean,
+				compactMaxLength?: number,
+				compactPreserveLevel?: number,
 				trailingCommas?: 'keep' | 'none' | 'all',
 				keyQuotes?: 'keep' | 'single' | 'double' | 'none-single' | 'none-double',
 				stringQuotes?: 'keep' | 'single' | 'double',
@@ -245,6 +247,8 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 	let validateEnabled = true;
 	let keepLinesEnabled = false;
 	let decorateAllColors = false;
+	let compactMaxLength = 0;
+	let compactPreserveLevel = 0;
 	let trailingCommasOption: undefined | 'none' | 'all' = undefined;
 	let keyQuotesOption: undefined | 'single' | 'double' | 'none-single' | 'none-double' = undefined;
 	let stringQuotesOption: undefined | 'single' | 'double' = undefined;
@@ -260,6 +264,8 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 		validateEnabled = !!settings.json5?.validate?.enable;
 		keepLinesEnabled = settings.json5?.keepLines?.enable || false;
 		decorateAllColors = settings.json5?.decorateAllColors || false;
+		compactMaxLength = sanitizeNonNegativeNumber(settings.json5?.format?.compactMaxLength);
+		compactPreserveLevel = sanitizeNonNegativeNumber(settings.json5?.format?.compactPreserveLevel);
 		trailingCommasOption = settings.json5?.format?.trailingCommas === 'keep' ? undefined : settings.json5?.format?.trailingCommas;
 		keyQuotesOption = settings.json5?.format?.keyQuotes === 'keep' ? undefined : settings.json5?.format?.keyQuotes;
 		stringQuotesOption = settings.json5?.format?.stringQuotes === 'keep' ? undefined : settings.json5?.format?.stringQuotes;
@@ -501,6 +507,13 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 		const document = documents.get(textDocument.uri);
 		if (document) {
 			const edits = languageService.format(document, range ?? getFullRange(document), options);
+			if (compactMaxLength > 0) {
+				const formattedText = TextDocument.applyEdits(document, edits);
+				const compactedText = compactFormattedText(formattedText, compactMaxLength, compactPreserveLevel);
+				if (formattedText !== compactedText) {
+					return [TextEdit.replace(getFullRange(document), compactedText)];
+				}
+			}
 			if (edits.length > formatterMaxNumberOfEdits) {
 				const newText = TextDocument.applyEdits(document, edits);
 				return [TextEdit.replace(getFullRange(document), newText)];
@@ -508,6 +521,179 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 			return edits;
 		}
 		return [];
+	}
+
+	function sanitizeNonNegativeNumber(value: unknown): number {
+		const normalized = Math.trunc(Number(value));
+		return Number.isFinite(normalized) && normalized > 0 ? normalized : 0;
+	}
+
+	type ContainerNode = {
+		start: number;
+		end: number;
+		depth: number;
+		open: '{' | '[';
+		close: '}' | ']';
+		children: ContainerNode[];
+	};
+
+	function compactFormattedText(text: string, maxLength: number, preserveLevel: number): string {
+		const nodes = parseContainerNodes(text);
+		if (nodes.length === 0) {
+			return text;
+		}
+		return renderSegment(text, 0, text.length, nodes, maxLength, preserveLevel);
+	}
+
+	function parseContainerNodes(text: string): ContainerNode[] {
+		const roots: ContainerNode[] = [];
+		const stack: ContainerNode[] = [];
+
+		for (let i = 0; i < text.length; i++) {
+			const ch = text[i];
+
+			if (ch === '"' || ch === '\'' || ch === '`') {
+				i = skipString(text, i, ch);
+				continue;
+			}
+			if (ch === '/' && text[i + 1] === '/') {
+				i = skipLineComment(text, i);
+				continue;
+			}
+			if (ch === '/' && text[i + 1] === '*') {
+				i = skipBlockComment(text, i);
+				continue;
+			}
+
+			if (ch === '{' || ch === '[') {
+				const node: ContainerNode = {
+					start: i,
+					end: i,
+					depth: stack.length + 1,
+					open: ch,
+					close: ch === '{' ? '}' : ']',
+					children: []
+				};
+				if (stack.length > 0) {
+					stack[stack.length - 1].children.push(node);
+				} else {
+					roots.push(node);
+				}
+				stack.push(node);
+			} else if ((ch === '}' || ch === ']') && stack.length > 0) {
+				const node = stack[stack.length - 1];
+				if (node.close === ch) {
+					node.end = i;
+					stack.pop();
+				}
+			}
+		}
+
+		return roots;
+	}
+
+	function renderSegment(text: string, start: number, end: number, nodes: ContainerNode[], maxLength: number, preserveLevel: number): string {
+		let result = '';
+		let cursor = start;
+		for (const node of nodes) {
+			result += text.slice(cursor, node.start);
+			result += renderNode(text, node, maxLength, preserveLevel);
+			cursor = node.end + 1;
+		}
+		result += text.slice(cursor, end);
+		return result;
+	}
+
+	function renderNode(text: string, node: ContainerNode, maxLength: number, preserveLevel: number): string {
+		const rendered = renderSegment(text, node.start + 1, node.end, node.children, maxLength, preserveLevel);
+		const segment = `${node.open}${rendered}${node.close}`;
+		if (node.depth <= preserveLevel || !segment.includes('\n') || containsComment(segment)) {
+			return segment;
+		}
+
+		const inner = collapseInlineWhitespace(rendered).trim();
+		const compact = node.open === '{'
+			? (inner.length === 0 ? '{}' : `{ ${inner} }`)
+			: `[${inner}]`;
+
+		return compact.length <= maxLength ? compact : segment;
+	}
+
+	function collapseInlineWhitespace(text: string): string {
+		let result = '';
+		let pendingSpace = false;
+
+		for (let i = 0; i < text.length; i++) {
+			const ch = text[i];
+
+			if (ch === '"' || ch === '\'' || ch === '`') {
+				if (pendingSpace && result.length > 0) {
+					result += ' ';
+					pendingSpace = false;
+				}
+				const end = skipString(text, i, ch);
+				result += text.slice(i, end + 1);
+				i = end;
+				continue;
+			}
+			if (/\s/.test(ch)) {
+				pendingSpace = true;
+				continue;
+			}
+
+			if (pendingSpace && result.length > 0 && !',:]}'.includes(ch) && !'{['.includes(result[result.length - 1])) {
+				result += ' ';
+			}
+			pendingSpace = false;
+			result += ch;
+		}
+
+		return result;
+	}
+
+	function containsComment(text: string): boolean {
+		for (let i = 0; i < text.length; i++) {
+			const ch = text[i];
+			if (ch === '"' || ch === '\'' || ch === '`') {
+				i = skipString(text, i, ch);
+				continue;
+			}
+			if (ch === '/' && (text[i + 1] === '/' || text[i + 1] === '*')) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function skipString(text: string, start: number, quote: string): number {
+		for (let i = start + 1; i < text.length; i++) {
+			if (text[i] === '\\') {
+				i++;
+				continue;
+			}
+			if (text[i] === quote) {
+				return i;
+			}
+		}
+		return text.length - 1;
+	}
+
+	function skipLineComment(text: string, start: number): number {
+		for (let i = start + 2; i < text.length; i++) {
+			if (text[i] === '\n') {
+				return i - 1;
+			}
+		}
+		return text.length - 1;
+	}
+
+	function skipBlockComment(text: string, start: number): number {
+		for (let i = start + 2; i < text.length - 1; i++) {
+			if (text[i] === '*' && text[i + 1] === '/') {
+				return i + 1;
+			}
+		}
+		return text.length - 1;
 	}
 
 	connection.onDocumentRangeFormatting((formatParams, token) => {

@@ -84,6 +84,8 @@ type Settings = {
 		schemas?: JSONSchemaSettings[];
 		format?: {
 			enable?: boolean,
+			compactMaxLength?: number,
+			compactPreserveLevel?: number,
 			trailingCommas?: 'keep' | 'none' | 'all',
 			keyQuotes?: 'keep' | 'single' | 'double' | 'none-single' | 'none-double',
 			stringQuotes?: 'keep' | 'single' | 'double',
@@ -114,6 +116,8 @@ export type JSONSchemaSettings = {
 export namespace SettingIds {
 	export const enableFormatter = 'json5.format.enable';
 	export const enableKeepLines = 'json5.format.keepLines';
+	export const compactMaxLength = 'json5.format.compactMaxLength';
+	export const compactPreserveLevel = 'json5.format.compactPreserveLevel';
 	export const trailingCommas = 'json5.format.trailingCommas';
 	export const keyQuotes = 'json5.format.keyQuotes';
 	export const stringQuotes = 'json5.format.stringQuotes';
@@ -697,6 +701,8 @@ function getSettings(): Settings {
 			validate: { enable: configuration.get(SettingIds.enableValidation) },
 			format: {
 				enable: configuration.get(SettingIds.enableFormatter),
+				compactMaxLength: configuration.get(SettingIds.compactMaxLength),
+				compactPreserveLevel: configuration.get(SettingIds.compactPreserveLevel),
 				trailingCommas: configuration.get(SettingIds.trailingCommas),
 				keyQuotes: configuration.get(SettingIds.keyQuotes),
 				stringQuotes: configuration.get(SettingIds.stringQuotes),

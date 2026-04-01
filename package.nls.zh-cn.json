@@ -6,6 +6,8 @@
 	"json5.schemas.schema.desc": "给定 URL 的 schema 定义。仅当需要避免访问 schema URL 时才需要提供 schema。",
 	"json5.format.enable.desc": "启用/禁用默认的 JSON5 格式化",
 	"json5.format.keepLines.desc": "格式化时保留所有现有的换行符。",
+	"json5.format.compactMaxLength.desc": "当对象或数组格式化后的长度不超过该值时，将其压缩为单行。设为 0 时禁用 compact 格式化。",
+	"json5.format.compactPreserveLevel.desc": "启用 compact 格式化时，在该嵌套层级以内保持对象和数组展开显示，仅压缩更深层级。",
 	"json5.format.trailingCommas.desc": "控制格式化时是否格式化尾随逗号。",
 	"json5.format.keyQuotes.desc": "控制格式化时对象键使用哪种引号。",
 	"json5.format.stringQuotes.desc": "控制格式化时除键以外的字符串使用哪种引号。",

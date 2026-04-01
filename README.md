@@ -36,6 +36,8 @@ Syntax highlighting, validation, formatting, and JSON schema based intellisense 
 - `json5.validate.enable`: Enable/disable validation.
 - `json5.format.enable`: Enable/disable formatting.
 - `json5.format.keepLines`: Keep all existing new lines when formatting.
+- `json5.format.compactMaxLength`: Compact objects and arrays into a single line when their formatted length is within this limit. `0` disables compact formatting.
+- `json5.format.compactPreserveLevel`: Keep objects and arrays expanded within this nesting level when compact formatting is enabled. Only deeper levels are compacted.
 - `json5.format.trailingCommas`: Control the occurrence of trailing commas in objects and arrays.
 - `json5.format.keyQuotes`: Control the usage of quotes for object keys.
 - `json5.format.stringQuotes`: Control the usage of quotes for string values in objects and arrays.
